@@ -1,4 +1,5 @@
-import pymongo
+import certifi
+from pymongo.mongo_client import MongoClient
 from airondatarepository import dataconstants
 from airondatarepository.user import User
 
@@ -9,11 +10,11 @@ class UserRepository:
 
     def insert_user(self, user: User):
         try:
-            client = pymongo.MongoClient(dataconstants.CONNECTION_STRING)
+            client = MongoClient(dataconstants.CONNECTION_STRING, tlsCAFile=certifi.where())
             db = client[dataconstants.DB_NAME]
             col  = db[dataconstants.USER_COLLECTION]
             new_user = col.insert_one({ dataconstants.FULL_NAME: user.full_name, dataconstants.EMAIL: user.email, dataconstants.PASSWORD: user.password })
-            id = new_user.__inserted_id
+            id = new_user.inserted_id
             client.close()
             return id
         except Exception as e:
@@ -21,7 +22,7 @@ class UserRepository:
             return -9999
     
     def user_exsits(self, email: str):
-        client = pymongo.MongoClient(dataconstants.CONNECTION_STRING)
+        client = MongoClient(dataconstants.CONNECTION_STRING, tlsCAFile=certifi.where())
         db = client[dataconstants.DB_NAME]
         col  = db[dataconstants.USER_COLLECTION]
         query = { dataconstants.EMAIL: email }
@@ -33,9 +34,10 @@ class UserRepository:
             
         return False
     
-    def delete_user(self, _id):
-        client = pymongo.MongoClient(dataconstants.CONNECTION_STRING)
+    def delete_user(self, email: str):
+        client = MongoClient(dataconstants.CONNECTION_STRING, tlsCAFile=certifi.where())
         db = client[dataconstants.DB_NAME]
         col  = db[dataconstants.USER_COLLECTION]
-        query = { dataconstants.ID: _id }
-        col.delete_one(query)
+        query = { dataconstants.EMAIL: email }
+        result = col.delete_one(query)
+        return result.deleted_count > 0
